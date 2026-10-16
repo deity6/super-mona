@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>封面演示 · 预制关卡预览</title>
+  <!--
+    这个页面只用来**验收**封面那段演示，不参与构建。
+
+    npm run dev 之后打开 http://127.0.0.1:5178/demo-preview.html
+
+    它跑的就是 `DemoRunner` 本身 —— 和首页卡片上那份完全同一段代码、同一套渲染，
+    只是给了一块大得多的画布，方便看清楚台阶、道具和角色的走位。尺寸也能现场调，
+    用来模拟卡片在不同断点下的比例。
+  -->
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      background: #0f1116;
+      color: #e7e9ef;
+      font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    header { padding: 18px 22px 10px; }
+    h1 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0.02em; }
+    p { margin: 0; color: #8b94a3; max-width: 70ch; }
+    .bar { display: flex; gap: 18px; align-items: center; padding: 14px 22px; flex-wrap: wrap; }
+    label { display: flex; gap: 8px; align-items: center; color: #8b94a3; }
+    input[type="range"] { width: 160px; }
+    output { color: #5fed83; }
+    .card {
+      margin: 6px 22px 40px;
+      width: min(100%, 1120px);
+      padding: 10px;
+      border: 1px solid #262b34;
+      border-radius: 10px;
+      background: #14171d;
+    }
+    canvas { display: block; width: 100%; background: #e9edec; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>封面演示 · 预制关卡</h1>
+    <p>
+      同一段预制关卡在循环：台阶与道具位置固定、速度恒定、跑满一圈无缝接回开头。
+      角色在画面中间偏左，相机竖直跟着她走。下面两个滑块只是**预览用**的尺寸，
+      真实封面由卡片的实际大小决定。
+    </p>
+  </header>
+
+  <div class="bar">
+    <label>宽 <input id="w" type="range" min="200" max="1120" value="700"><output id="wv">700</output></label>
+    <label>高 <input id="h" type="range" min="70" max="400" value="292"><output id="hv">292</output></label>
+    <label style="color:#5fed83">按卡片真实尺寸是 283 × 118</label>
+  </div>
+
+  <div class="card"><canvas id="stage" width="700" height="292" style="aspect-ratio:auto"></canvas></div>
+
+  <script type="module">
+    import { DemoRunner } from './src/game/DemoRunner.js';
+
+    const canvas = document.getElementById('stage');
+    const wInput = document.getElementById('w');
+    const hInput = document.getElementById('h');
+    const wv = document.getElementById('wv');
+    const hv = document.getElementById('hv');
+
+    // 让 canvas 的 CSS 尺寸就是滑块的尺寸，DemoRunner 按 clientWidth/Height 定取景
+    function applySize() {
+      canvas.style.width = wInput.value + 'px';
+      canvas.style.height = hInput.value + 'px';
+      wv.textContent = wInput.value;
+      hv.textContent = hInput.value;
+    }
+    wInput.addEventListener('input', applySize);
+    hInput.addEventListener('input', applySize);
+    applySize();
+
+    const runner = new DemoRunner(canvas);
+    window.__demo = runner;
+  </script>
+</body>
+</html>

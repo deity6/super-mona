@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cursor Trail · Super Mona</title>
+<style>
+:root{
+  --paper:#f7f6f2; --ink:#14161a; --muted:#5f6368; --line:#dcdad3; --line2:#eaE8e1;
+  --green:#08872b;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(var(--line2) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);
+  background-size:20px 20px;
+}
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px 80px}
+header{position:sticky;top:0;z-index:20;background:rgba(247,246,242,.94);border-bottom:1px solid var(--line);
+       backdrop-filter:blur(6px)}
+.hd{max-width:960px;margin:0 auto;padding:11px 24px;display:flex;gap:14px;align-items:center;
+    font-family:var(--mono);font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;background:var(--green);display:inline-block}
+.hd .r{margin-left:auto}
+h1{font-size:34px;line-height:1.1;letter-spacing:-.02em;margin:34px 0 8px;font-weight:700}
+h1 span{color:var(--green)}
+.sub{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:26px}
+.area{
+  position:relative;border:1px solid var(--line);border-radius:10px;background:#fff;
+  min-height:340px;padding:28px;margin-bottom:22px;transition:border-color .25s,background .25s;
+}
+.area:hover{border-color:#c6c3ba}
+.area .tag{
+  position:absolute;top:-9px;left:16px;background:var(--paper);padding:0 8px;
+  font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;
+}
+.area h2{font-size:22px;margin:0 0 10px;letter-spacing:-.01em}
+.area p{margin:0 0 12px;color:#2c2f33;max-width:62ch}
+.hint{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:20px}
+.cursor{display:inline-block;width:2px;height:14px;background:var(--green);animation:blink 1.05s steps(1) infinite;vertical-align:-2px}
+@keyframes blink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+.panel{border:1px solid var(--line);border-radius:10px;background:#fff;padding:20px 22px;margin-bottom:22px}
+.panel h3{font-size:13px;font-family:var(--mono);font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+          color:var(--muted);margin:0 0 16px}
+.row{display:grid;grid-template-columns:150px 1fr 62px;gap:14px;align-items:center;margin-bottom:12px}
+.row label{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.row output{font-family:var(--mono);font-size:12px;text-align:right;color:var(--ink)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--line);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--green);cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px var(--green)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--green);
+  cursor:pointer;border:2px solid #fff}
+.sw{display:inline-block;width:18px;height:18px;border-radius:3px;vertical-align:-4px;margin-right:4px;border:1px solid rgba(0,0,0,.08)}
+.chips{font-family:var(--mono);font-size:13px;letter-spacing:3px;color:var(--muted);margin-top:6px}
+.switch{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;color:var(--muted);
+        cursor:pointer;user-select:none;margin-top:4px}
+.switch input{accent-color:var(--green);width:15px;height:15px;cursor:pointer}
+pre{font-family:var(--mono);font-size:12px;line-height:1.65;background:#16181d;color:#e6e6e6;
+    padding:16px 18px;border-radius:8px;overflow-x:auto;margin:0}
+pre .c{color:#6d7683}
+pre .k{color:#7ec9ff}
+pre .s{color:#a5e075}
+.note{font-size:12.5px;color:var(--muted);font-family:var(--mono);margin-top:12px}
+/* ============ 以下是原站逻辑的精确复刻 ============ */
+.ct-block{
+  position:fixed;top:0;left:0;pointer-events:none;font-size:9px;text-align:center;z-index:2;
+}
+.ct-block .ct-color{
+  width:100%;height:100%;
+  transform:scale(0);
+  transition:transform .1s cubic-bezier(.3,.41,.04,1.01);
+}
+.ct-block.active .ct-color{transform:scale(1)}
+.ct-color{display:flex;align-items:center;justify-content:center;color:#fff;line-height:1;border-radius:2px}
+@media(max-width:640px){
+  h1{font-size:24px}
+  .row{grid-template-columns:110px 1fr 52px;gap:10px}
+  .area{padding:20px;min-height:280px}
+}
+</style>
+
+<style id="unv-nav-css">
+  .unv-nav{position:sticky;top:0;z-index:9999;display:flex;align-items:center;gap:18px;
+    height:46px;padding:0 20px;background:#0f1116;color:#e7e9ef;
+    font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    border-bottom:1px solid #262b34;box-sizing:border-box}
+  .unv-nav a{color:#9aa4b2;text-decoration:none;transition:color .15s}
+  .unv-nav a:hover{color:#e7e9ef}
+  .unv-nav a.is-here{color:#5fed83}
+  .unv-nav__brand{color:#e7e9ef!important;letter-spacing:.04em}
+  .unv-nav__brand i{font-style:normal;color:#5fed83}
+  .unv-nav__sep{width:1px;height:16px;background:#2b313c}
+  .unv-nav__spacer{flex:1}
+  /* 语言切换：不要做成带框的按钮 —— 它是个轻量的开关，不是一个操作。
+     无框文字 + 悬停时下划线由左滑入，跟这一行的链接同一个语言。 */
+  .unv-nav__lang{position:relative;background:none;border:0;padding:0;color:#9aa4b2;
+    font:inherit;letter-spacing:.04em;cursor:pointer;transition:color .15s}
+  .unv-nav__lang::after{content:'';position:absolute;left:0;right:0;bottom:-3px;height:1px;
+    background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .2s}
+  .unv-nav__lang:hover{color:#5fed83}
+  .unv-nav__lang:hover::after{transform:scaleX(1)}
+  @media (max-width:640px){.unv-nav{gap:11px;padding:0 12px;font-size:12px}
+    .unv-nav__sep{display:none}}
+</style>
+</head>
+<body>
+<nav class="unv-nav" aria-label="Project">
+  <a class="unv-nav__brand" href="./">SUPER<i>MONA</i></a>
+  <span class="unv-nav__sep"></span>
+  <a href="./" data-en="Game">游戏</a>
+  <a href="./breakdown.html" data-en="Breakdown">拆解</a>
+  <a href="./sprite.html" data-en="Sprite sheet">精灵表</a>
+  <a href="./trail.html" data-en="Cursor trail">拖尾</a>
+  <span class="unv-nav__spacer"></span>
+  <button class="unv-nav__lang" id="unvLang" type="button">中文</button>
+</nav>
+
+<script id="unv-i18n">
+(function(){
+  var KEY='universe-lab:lang';
+  var lang;
+  try { lang = localStorage.getItem(KEY); } catch(e){}
+  if (lang !== 'en' && lang !== 'zh') lang = 'en';   // 默认英文
+
+  var els=[];
+  function collect(){
+    els=[];
+    var list=document.querySelectorAll('[data-en]');
+    for (var i=0;i<list.length;i++){
+      var el=list[i];
+      if (el.__zh === undefined) el.__zh = el.textContent;
+      els.push(el);
+    }
+  }
+  function apply(){
+    for (var i=0;i<els.length;i++){
+      var el=els[i];
+      el.textContent = lang === 'en' ? el.getAttribute('data-en') : el.__zh;
+    }
+    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+    var b=document.getElementById('unvLang');
+    if (b) b.textContent = lang === 'en' ? '中文' : 'EN';
+    // 页面里由 JS 动态生成的文案（图例、播放器状态行等）靠这个事件重画
+    document.dispatchEvent(new CustomEvent('unv-lang', { detail: lang }));
+  }
+  window.UNV_LANG = {
+    get: function(){ return lang; },
+    set: function(l){ lang = (l === 'zh') ? 'zh' : 'en'; try { localStorage.setItem(KEY, lang); } catch(e){} apply(); }
+  };
+  function boot(){
+    collect();
+    var b=document.getElementById('unvLang');
+    if (b) b.addEventListener('click', function(){ window.UNV_LANG.set(lang === 'en' ? 'zh' : 'en'); });
+    // 当前页高亮
+    var here = (location.pathname.split('/').pop() || 'index.html');
+    var links = document.querySelectorAll('.unv-nav a');
+    for (var i=0;i<links.length;i++){
+      var h = links[i].getAttribute('href').split('/').pop() || 'index.html';
+      if (h === here) links[i].classList.add('is-here');
+    }
+    apply();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+
+
+<header><div class="hd">
+  <span class="dot"></span><span>cursor-trail/</span>
+  <span class="r"><span data-en="a githubuniverse.com recreation">githubuniverse.com 复刻</span></span>
+</div></header>
+
+<div class="wrap">
+  <h1>Cursor Trail<span>/</span></h1>
+  <div class="sub"><span data-en="Coloured character blocks that follow the cursor · from the original’s CursorTrailAnimation component">彩色字符方块跟随鼠标 · 源自 githubuniverse.com 的 CursorTrailAnimation 组件</span></div>
+
+  <div class="area" id="area1">
+    <span class="tag">trailAnimationArea</span>
+    <h2><span data-en="Move the cursor around inside this box">把鼠标在这块区域里划动</span></h2>
+    <p><span data-en="Every 20px of grid travel lights one new block: a colour at random from six, a character at random from eleven symbols, and a 30% chance the character is blank. Blocks go from">每移动一个 20px 网格，就会点亮一个新方块：随机从 6 色里取一个颜色，随机从 11 个符号里取一个字符，30% 概率是空格。方块从</span> <code>scale(0)</code> <span data-en="to">弹到</span> <code>scale(1)</code><span data-en=", hold for 100–400ms, then shrink back.">，停留 100–400ms 后缩回去。</span></p>
+    <p><span data-en="Only ten blocks exist and they are reused in rotation, so a trail never runs longer than ten segments. That is how the original works — it does not create elements every frame.">总共只有 10 个方块在轮转复用 —— 所以拖尾最长不会超过 10 段。这是原站的做法，不是每帧新建元素。</span></p>
+    <div class="hint"><span>next-char/</span><span class="cursor"></span></div>
+  </div>
+
+  <div class="panel">
+    <h3><span data-en="Parameters (the original’s defaults are marked)">参数（原站默认值已标注）</span></h3>
+    <div class="row">
+      <label><span data-en="Grid step (grid)">网格间距 grid</span></label>
+      <input type="range" id="pGrid" min="10" max="48" step="2" value="20">
+      <output id="oGrid">20px</output>
+    </div>
+    <div class="row">
+      <label><span data-en="Block pool (pool)">方块池 pool</span></label>
+      <input type="range" id="pPool" min="4" max="40" step="1" value="10">
+      <output id="oPool">10</output>
+    </div>
+    <div class="row">
+      <label><span data-en="Lifetime (life)">停留时长 life</span></label>
+      <input type="range" id="pLife" min="60" max="1200" step="20" value="400">
+      <output id="oLife">100–400ms</output>
+    </div>
+    <div class="row">
+      <label><span data-en="Block size (size)">方块尺寸 size</span></label>
+      <input type="range" id="pSize" min="12" max="40" step="2" value="20">
+      <output id="oSize">20px</output>
+    </div>
+    <label class="switch"><input type="checkbox" id="pLoose" checked> <span data-en="Permissive mode (also fires over text; the original skips plain text nodes)">宽松模式（文字上也能触发；原站会跳过纯文本元素）</span></label>
+  </div>
+
+  <div class="panel">
+    <h3><span data-en="Palette / character set">调色盘 / 字符集</span></h3>
+    <div>
+      <span class="sw" style="background:#ae85ff"></span><span class="sw" style="background:#f73678"></span><span class="sw" style="background:#c05200"></span><span class="sw" style="background:#583af7"></span><span class="sw" style="background:#5fed83"></span><span class="sw" style="background:#bba00a"></span>
+    </div>
+    <div class="chips">- / ) . + = &gt; &lt; * &amp; (</div>
+    <div class="note"><span data-en="Colours are drawn at random each time rather than cycled in order — that is what the original source does:">颜色是每次点亮时随机取的，不是按顺序轮转 —— 原站源码里就是</span> <code>colors[Math.floor(Math.random() * colors.length)]</code>。</div>
+  </div>
+
+  <div class="panel">
+    <h3><span data-en="Core logic (recovered from the original)">核心逻辑（原站解出）</span></h3>
+<pre><span class="c"><span data-en="// grid snapping: only light up when the grid cell actually changes">// 网格吸附：只有当网格坐标变了才点亮，避免高频抖动</span></span>
+gx = grid * Math.floor(clientX / grid)
+gy = grid * Math.floor(clientY / grid)
+
+<span class="c"><span data-en="// reuse the same ten blocks in rotation">// 轮转复用 10 个方块</span></span>
+idx = (idx + 1) % pool
+tiles[idx] = { x: gx, y: gy, active: true,
+               color: colors[random], text: random() &lt; .3 ? <span class="s">" "</span> : chars[random] }
+
+<span class="c"><span data-en="// expire on schedule; CSS handles the shrink-back">// 到点失活，CSS 负责缩回去</span></span>
+setTimeout(() =&gt; tiles[idx].active = false, 100 + 300 * Math.random())</pre>
+    <div class="note"><span data-en="Positioning uses">位移用</span> <code>transform: translate(x, y)</code><span data-en=", the container is">，容器</span> <code>position: fixed</code><span data-en=", so it takes viewport coordinates directly.">，所以直接吃视口坐标。</span></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var COLORS = ['#ae85ff', '#f73678', '#c05200', '#583af7', '#5fed83', '#bba00a'];
+  var CHARS  = ['-', '/', ')', '.', '+', '=', '>', '<', '*', '&', '('];
+
+  var cfg = { grid: 20, pool: 10, life: 400, size: 20, loose: true };
+
+  var layer = document.createElement('div');
+  layer.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(layer);
+
+  var nodes = [];
+  var pool  = 0;
+
+  function buildPool() {
+    layer.innerHTML = '';
+    nodes = [];
+    for (var i = 0; i < cfg.pool; i++) {
+      var b = document.createElement('div');
+      b.className = 'ct-block';
+      b.style.width = cfg.size + 'px';
+      b.style.height = cfg.size + 'px';
+      b.style.transform = 'translate(-9999px,-9999px)';
+      var c = document.createElement('div');
+      c.className = 'ct-color';
+      c.style.fontSize = Math.max(7, Math.round(cfg.size * 0.45)) + 'px';
+      b.appendChild(c);
+      layer.appendChild(b);
+      nodes.push({ el: b, color: c, active: false, id: -1 });
+    }
+    pool = cfg.pool;
+  }
+
+  var poolIdx = 0, idSeq = 0, timers = new Set();
+
+  function reduced() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function onMove(ev) {
+    if (reduced()) return;
+    var host = ev.currentTarget;
+    var target = ev.target;
+
+    if (target.closest && target.closest('.trailAnimationIgnore')) return;
+
+    var r = host.getBoundingClientRect();
+    if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) return;
+
+    if (!cfg.loose) {
+      var txt = (target.textContent || '').trim();
+      if (!(target.children.length !== 0 || txt === '')) return;
+      if (target.tagName === 'BUTTON' || target.tagName === 'A') return;
+    }
+
+    var gx = cfg.grid * Math.floor(ev.clientX / cfg.grid);
+    var gy = cfg.grid * Math.floor(ev.clientY / cfg.grid);
+    if (node.gx === gx && node.gy === gy) return;
+
+    node.gx = gx; node.gy = gy;
+
+    poolIdx = (poolIdx + 1) % pool;
+    var n = nodes[poolIdx];
+    var myId = idSeq++;
+
+    n.el.style.transform = 'translate(' + gx + 'px,' + gy + 'px)';
+    n.color.textContent = Math.random() < 0.3 ? ' ' : CHARS[Math.floor(Math.random() * CHARS.length)];
+    n.color.style.backgroundColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+    n.active = true;
+    n.id = myId;
+    n.el.classList.add('active');
+
+    var t = window.setTimeout(function () {
+      timers.delete(t);
+      n.el.classList.remove('active');
+      n.active = false;
+    }, 100 + 300 * Math.random() * (cfg.life / 400));
+    timers.add(t);
+  }
+
+  var node = { gx: -1, gy: -1 };
+
+  function bind() {
+    var areas = document.querySelectorAll('.trailAnimationArea, #area1');
+    for (var i = 0; i < areas.length; i++) areas[i].addEventListener('mousemove', onMove);
+  }
+
+  var elGrid = document.getElementById('pGrid'), oGrid = document.getElementById('oGrid');
+  var elPool = document.getElementById('pPool'), oPool = document.getElementById('oPool');
+  var elLife = document.getElementById('pLife'), oLife = document.getElementById('oLife');
+  var elSize = document.getElementById('pSize'), oSize = document.getElementById('oSize');
+  var elLoose = document.getElementById('pLoose');
+
+  elGrid.addEventListener('input', function () {
+    cfg.grid = +elGrid.value; oGrid.textContent = cfg.grid + 'px';
+  });
+  elPool.addEventListener('input', function () {
+    cfg.pool = +elPool.value; oPool.textContent = cfg.pool; buildPool();
+  });
+  elLife.addEventListener('input', function () {
+    cfg.life = +elLife.value; oLife.textContent = '100–' + cfg.life + 'ms';
+  });
+  elSize.addEventListener('input', function () {
+    cfg.size = +elSize.value; oSize.textContent = cfg.size + 'px'; buildPool();
+  });
+  elLoose.addEventListener('change', function () { cfg.loose = elLoose.checked; });
+
+  buildPool();
+  bind();
+})();
+</script>
+</body>
+</html>

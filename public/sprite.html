@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sprite Studio · Super Mona</title>
+<style>
+  :root{
+    --bg:#0f1116; --panel:#171a21; --panel2:#1d2129; --line:#2a2f3a; --line2:#353b49;
+    --fg:#e7e9ef; --dim:#8b93a7; --dim2:#5d6577;
+    --c0:#5fed83; --c1:#bba00a; --c2:#ae85ff; --c3:#f73678; --c4:#c05200; --c5:#7fffff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 var(--mono);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 22px 90px}
+  header{margin-bottom:20px}
+  h1{font-size:19px;margin:0 0 7px;letter-spacing:-.01em;font-weight:600}
+  h1 em{font-style:normal;color:var(--dim2)}
+  header p{margin:0;color:var(--dim);font-size:12.5px;max-width:75ch}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-top:16px}
+  .card h2{font-size:13px;margin:0 0 6px;display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:.02em}
+  .card h2 .n{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:5px;background:var(--line2);font-size:11px;flex:none}
+  .hint{margin:0 0 14px;color:var(--dim);font-size:12px;max-width:80ch}
+  .row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+  canvas{image-rendering:pixelated;display:block}
+  /* 解剖图 */
+  #sheetWrap{position:relative;border:1px solid var(--line);border-radius:8px;padding:10px}
+  .bg-dark{background:#0b0d11}
+  .bg-light{background:#f4f6f8}
+  .bg-grid{background-color:#0b0d11;
+    background-image:linear-gradient(45deg,#14171d 25%,transparent 25%,transparent 75%,#14171d 75%),
+                     linear-gradient(45deg,#14171d 25%,transparent 25%,transparent 75%,#14171d 75%);
+    background-size:16px 16px;background-position:0 0,8px 8px}
+  .legend{list-style:none;margin:0;padding:0;min-width:270px;flex:1}
+  .legend li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #20242c;font-size:12.5px}
+  .legend li:last-child{border-bottom:none}
+  .sw{width:11px;height:11px;border-radius:3px;flex:none;margin-top:5px}
+  .legend b{font-weight:600}
+  .legend .meta{color:var(--dim);font-size:11.5px}
+  .legend .frames{margin-left:auto;color:var(--dim2);font-size:11.5px;white-space:nowrap;padding-left:10px}
+  /* 播放器 */
+  .stage{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+  .player{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px;position:relative;overflow:hidden}
+  .player::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;background:var(--acc)}
+  .phead{display:flex;align-items:baseline;gap:7px;margin-bottom:9px}
+  .phead b{font-size:12.5px;font-weight:600}
+  .phead span{color:var(--dim2);font-size:10.5px;margin-left:auto}
+  .pbody{display:grid;place-items:center;height:132px;border-radius:7px}
+  .pfoot{margin-top:9px;font-size:11px;color:var(--dim)}
+  .frames-bar{display:flex;gap:3px;margin-top:7px;flex-wrap:wrap}
+  .fb{width:14px;height:5px;border-radius:2px;background:#2b313d}
+  .fb.on{background:var(--acc)}
+  .fb.used{background:#3d4553}
+  /* 控制区 */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  label.f{display:block;font-size:11px;color:var(--dim);margin-bottom:4px}
+  input[type=number],input[type=text]{width:100%;background:#0b0d11;border:1px solid var(--line2);color:var(--fg);
+        border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px}
+  input:focus{outline:none;border-color:#5b6d8a}
+  .btn{background:var(--line2);border:1px solid #414958;color:var(--fg);border-radius:7px;padding:7px 13px;
+       font:inherit;font-size:12.5px;cursor:pointer;transition:.15s}
+  .btn:hover{background:#414958;border-color:#525c6e}
+  .btn.on{background:#2d5c3a;border-color:#3d7a4d}
+  #drop{display:block;border:1.5px dashed var(--line2);border-radius:9px;padding:20px;text-align:center;color:var(--dim);
+        cursor:pointer;font-size:12.5px;transition:.15s;margin-bottom:4px}
+  .msg{margin:0 0 14px;font-size:12px;color:var(--dim);min-height:17px}
+  .msg.good{color:var(--c0)}
+  .msg.bad{color:var(--c3)}
+  #drop:hover,#drop.over{border-color:#5b6d8a;color:var(--fg);background:#151922}
+  #drop.over{border-color:var(--c0);background:#12211a}
+  table.clips{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  table.clips th{text-align:left;color:var(--dim);font-weight:500;font-size:11px;padding:0 6px 7px}
+  table.clips td{padding:3px 6px}
+  table.clips input[type=number]{padding:4px 6px}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .tagline{color:var(--dim2);font-size:11.5px;margin-left:auto}
+  .foot{margin-top:26px;color:var(--dim2);font-size:11.5px;border-top:1px solid var(--line);padding-top:14px}
+  kbd{background:var(--line2);border-radius:4px;padding:1px 5px;font-size:11px}
+</style>
+<script>window.L = function (zh, en) {
+  return (window.UNV_LANG && window.UNV_LANG.get() === 'en') ? en : zh;
+};</script>
+
+<style id="unv-nav-css">
+  .unv-nav{position:sticky;top:0;z-index:9999;display:flex;align-items:center;gap:18px;
+    height:46px;padding:0 20px;background:#0f1116;color:#e7e9ef;
+    font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    border-bottom:1px solid #262b34;box-sizing:border-box}
+  .unv-nav a{color:#9aa4b2;text-decoration:none;transition:color .15s}
+  .unv-nav a:hover{color:#e7e9ef}
+  .unv-nav a.is-here{color:#5fed83}
+  .unv-nav__brand{color:#e7e9ef!important;letter-spacing:.04em}
+  .unv-nav__brand i{font-style:normal;color:#5fed83}
+  .unv-nav__sep{width:1px;height:16px;background:#2b313c}
+  .unv-nav__spacer{flex:1}
+  /* 语言切换：不要做成带框的按钮 —— 它是个轻量的开关，不是一个操作。
+     无框文字 + 悬停时下划线由左滑入，跟这一行的链接同一个语言。 */
+  .unv-nav__lang{position:relative;background:none;border:0;padding:0;color:#9aa4b2;
+    font:inherit;letter-spacing:.04em;cursor:pointer;transition:color .15s}
+  .unv-nav__lang::after{content:'';position:absolute;left:0;right:0;bottom:-3px;height:1px;
+    background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .2s}
+  .unv-nav__lang:hover{color:#5fed83}
+  .unv-nav__lang:hover::after{transform:scaleX(1)}
+  @media (max-width:640px){.unv-nav{gap:11px;padding:0 12px;font-size:12px}
+    .unv-nav__sep{display:none}}
+</style>
+</head>
+<body>
+<nav class="unv-nav" aria-label="Project">
+  <a class="unv-nav__brand" href="./">SUPER<i>MONA</i></a>
+  <span class="unv-nav__sep"></span>
+  <a href="./" data-en="Game">游戏</a>
+  <a href="./breakdown.html" data-en="Breakdown">拆解</a>
+  <a href="./sprite.html" data-en="Sprite sheet">精灵表</a>
+  <a href="./trail.html" data-en="Cursor trail">拖尾</a>
+  <span class="unv-nav__spacer"></span>
+  <button class="unv-nav__lang" id="unvLang" type="button">中文</button>
+</nav>
+
+<script id="unv-i18n">
+(function(){
+  var KEY='universe-lab:lang';
+  var lang;
+  try { lang = localStorage.getItem(KEY); } catch(e){}
+  if (lang !== 'en' && lang !== 'zh') lang = 'en';   // 默认英文
+
+  var els=[];
+  function collect(){
+    els=[];
+    var list=document.querySelectorAll('[data-en]');
+    for (var i=0;i<list.length;i++){
+      var el=list[i];
+      if (el.__zh === undefined) el.__zh = el.textContent;
+      els.push(el);
+    }
+  }
+  function apply(){
+    for (var i=0;i<els.length;i++){
+      var el=els[i];
+      el.textContent = lang === 'en' ? el.getAttribute('data-en') : el.__zh;
+    }
+    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+    var b=document.getElementById('unvLang');
+    if (b) b.textContent = lang === 'en' ? '中文' : 'EN';
+    // 页面里由 JS 动态生成的文案（图例、播放器状态行等）靠这个事件重画
+    document.dispatchEvent(new CustomEvent('unv-lang', { detail: lang }));
+  }
+  window.UNV_LANG = {
+    get: function(){ return lang; },
+    set: function(l){ lang = (l === 'zh') ? 'zh' : 'en'; try { localStorage.setItem(KEY, lang); } catch(e){} apply(); }
+  };
+  function boot(){
+    collect();
+    var b=document.getElementById('unvLang');
+    if (b) b.addEventListener('click', function(){ window.UNV_LANG.set(lang === 'en' ? 'zh' : 'en'); });
+    // 当前页高亮
+    var here = (location.pathname.split('/').pop() || 'index.html');
+    var links = document.querySelectorAll('.unv-nav a');
+    for (var i=0;i<links.length;i++){
+      var h = links[i].getAttribute('href').split('/').pop() || 'index.html';
+      if (h === here) links[i].classList.add('is-here');
+    }
+    apply();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+
+<div class="wrap">
+
+  <header>
+    <h1><span data-en="Sprite Studio">精灵动画工作台</span> <em>· Sprite Studio</em></h1>
+    <p><span data-en="The left pane labels what every cell of the sheet is for; the middle one shows how it moves. Playback follows the original’s own clip definitions, frame for frame.">看左边是原图每个格子做什么，中间是它动起来的样子。把你自己画的精灵图拖进来，用同一套动作定义立刻预览动画。所有处理都在本地浏览器里完成，不上传任何文件。</span></p>
+  </header>
+
+  <section class="card">
+    <h2><span class="n">1</span><span data-en="Anatomy — what every cell is">原图解剖 —— 每个格子是什么</span></h2>
+    <p class="hint"><span data-en="Cells are counted left to right, top to bottom. Grey cells are padding — the original’s code never reads them.">格子编号按「从左到右、从上到下」计。灰底格子是图集里留空、原站代码从未取用的位置。</span></p>
+    <div class="row">
+      <div id="sheetWrap"><canvas id="sheetCanvas"></canvas></div>
+      <ul class="legend" id="legend"></ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">2</span><span data-en="How it moves">动起来的样子</span></h2>
+    <p class="hint"><span data-en="The bar under each clip is its frame sequence; the lit cell is the current frame. Frame rate and loop points match the original’s code.">下方色条是帧序列，亮的那个是当前帧。帧率与循环点和原站代码一致。</span></p>
+    <div class="tools" style="margin:0 0 14px">
+      <span style="color:var(--dim);font-size:11.5px"><span data-en="Background">预览背景</span></span>
+      <button class="btn" data-bg="bg-grid"><span data-en="Checker">棋盘</span></button>
+      <button class="btn" data-bg="bg-dark"><span data-en="Dark">深色</span></button>
+      <button class="btn" data-bg="bg-light"><span data-en="Light">浅色</span></button>
+      <span class="tagline"><span data-en="The character was drawn for light scenes — pick Light to read its outline.">角色是给浅色场景画的，想看清轮廓用「浅色」</span></span>
+    </div>
+    <div class="stage" id="stage"></div>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">3</span><span data-en="Slice settings &amp; clips">切片参数与动作定义</span></h2>
+
+    <div class="tools">
+      <button class="btn" data-preset="mona"><span data-en="Preset: Mona 5×5">预设：Mona 5×5</span></button>
+      <button class="btn" id="reset"><span data-en="Reset">恢复原图</span></button>
+      <span class="tagline" id="imgInfo"></span>
+    </div>
+
+    <div class="grid">
+      <div><label class="f"><span data-en="Columns">列数</span></label><input type="number" id="cols" min="1" max="64" value="5"></div>
+      <div><label class="f"><span data-en="Rows">行数</span></label><input type="number" id="rows" min="1" max="64" value="5"></div>
+      <div><label class="f"><span data-en="Frame width (px)">每帧宽（px）</span></label><input type="number" id="fw" min="1" value="26"></div>
+      <div><label class="f"><span data-en="Frame height (px)">每帧高（px）</span></label><input type="number" id="fh" min="1" value="27"></div>
+      <div><label class="f"><span data-en="Zoom">放大</span></label><input type="number" id="zoom" min="1" max="12" value="3"></div>
+    </div>
+
+    <table class="clips">
+      <thead><tr>
+        <th style="width:22%"><span data-en="Clip">动作</span></th>
+        <th style="width:16%"><span data-en="Start frame">起始帧</span></th>
+        <th style="width:16%"><span data-en="Frames">帧数</span></th>
+        <th style="width:20%"><span data-en="Frame ms">每帧时长 ms</span></th>
+        <th style="width:16%"><span data-en="Loops to">循环回到</span></th>
+        <th style="width:10%"></th>
+      </tr></thead>
+      <tbody id="clipRows"></tbody>
+    </table>
+    <div class="tools" style="margin-top:10px">
+      <button class="btn" id="addClip"><span data-en="+ Add clip">+ 添加动作</span></button>
+      <span class="tagline"><span data-en="“Start frame” counts linearly across the whole sheet from 0, so one clip can span rows.">「起始帧」是全图线性编号（0 起），可以跨行</span></span>
+    </div>
+  </section>
+
+  <p class="foot">
+    <span data-en="Frame data from">帧数据来源：</span><code>UniverseGameSet_01.png</code> <span data-en="and githubuniverse.com’s">与 githubuniverse.com 的</span> <code>MONA_CLIPS</code> <span data-en="definition · playback always disables interpolation (">定义 · 播放一律关闭插值（</span><code>image-rendering: pixelated</code><span data-en=") so pixel edges stay crisp">），保证像素边缘不糊</span>
+  </p>
+</div>
+
+<script>
+/* ============ 内嵌的两张图 ============ */
+const IMG_MONA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIIAAACHCAYAAADazoFOAAALvklEQVR4nO2dv2skRxbHXy+b39Gr0RxcYHAwjGEiCazAuyyGQ6xYUORgQKGyw7CZow39JzjdcGGDiwRGRhgcOVAgRYIbJrjjAgfa0bbxXzAX7Lzxm5r6Xe9V9/TWBwZmprvr29X1uqq6+r0qgEKhUCgUCoUApudny+n52ZJrv09Fp1dMz8+W9aBe1oPaelHofkXnzzR6Ydj0YtgunrpfqFjfdNQ0ds2wK/UP00HHpyfaBK4uLjf2effm7VaaOvqmMz0/W9JjTcer+4VoSOpYD46hWTTOTPVNB3pg2Bt/jibj5cP9e5/zMeKTqb7p9MGwH2t2hHpQr3//ezbfOuiL8Ui7/YvxCG6vb3xPqDc6vudiY3p+tnQZnKTOliFQdBfN9f+z50+DT64POrtu2I9MYqrA8Mme8eRs22z0TQexGRZ+fPbPqaM1hEIcu2zY66YBn0fndzPtjvcfHrSJ3n94WG8DADg4OoSDo0NtO0Sfebl0AGCjM6c+V0vqhDz2+SKVrovHVHw0GQcNcNALhtxe38D8blapGaK/OXXU/6mmtI6EYevGA+hvKcN+TAvo4OjQKKQKmjBlCH+7ap5UHSSHTp8M+zEtIKwV5nczGD7Zc14kHbfXN3BwdKjdptYKqTq6mie3Dn7nMjhQCl/VkjJsY9WNgr4XDx+zdNZmok86MRqqnkkrtWx0OqphGzNJBS37rL+HFExOna+/+hYAAH774+cgnb//5R/VL7/+ECK104btEne1SVy9WzEdNAQAgFXBWrW+/urbStk/iF29gawji6PJGExj9XvDfWd75UsuHZvWSifZsFdpWI1tlZ8kLW4doyFwvODoEr/8+oMzT7T2SMFm2MBk3D7lE6JjHFnkeMHBwcP9+61n6VhseXq4fw/D8e/JOtPzM+cbz9Q8SdykWkPIkZkQrVSjxNpAWickjRQt32NDymjLEEKs7ericj3IEetC5qP1cP8+Wmc4/n05moy9dX774+clHheiMz0/W4b4P2CepB1l0WiCdVYXPOgzmoyXoaNeRedPLV8NNLYc+SkUCoVCoWvkCBCR1ihRVYnkCBCR1sgZVcWJl6tajjvI51FS3c/ky9+mBk3/6uJS+9im7teFmi3Il97m40/38w0KQXIEh/RFA+EuF+OGNkO4QnEZXl80bFqpZWMUzmXdOaKR+qKBSJSNszqJxde68b16StCG6xVyXzRAsGy0nUWu0KqY43IEh+yyhlTZGP0RcoVwUT3V7crmcBrjjNonDe6ysXoo2YRc/8fEJhY+gnesT3+Bq2yshiBt3ZLRVZKBIaAJcJHKB+ZF/Y+jbGi6XjWCBCHRVS7j0sUehAaG+GrQ/3JogGJ0XJ5jqnFpO4umABVQrJt+QMmoLQ01uiqVg6NDY8zg9Pxsyamh25ZD492bt9W7N28rrrJRr5XWQ8nH6rBaU6s35Pb6xpop2KwV1hmIwXS+mD6Xhq45yKEBpKnjKhtQmk9tW5QaTQMA8Oq7V+tMme5U/L8e1EvqccsdHILP3pIa9aBeHp+eYPUulg/4eCMFpa/y6rtXAErTZoyxi8kQ5dnzp9oqSKd3dXEJzaKB0WTsdL8ODQ5RB2B8XLxjAlBwtE81Bk4NcqxYeB2ApqdN/ePuPzx4fah/nGtQaarMbRjgh+eN5lUvu4ZGyzc/wenjNU0tG5VKFSLDj8t6UIvdQUDuItR0jdfHRCMpecLzdb4XCH15pujB9PwMbEPBsXmh58YZ9rbVWSQWDcenJ16RMvO7WYUfd3Y2aRaNtnOkEhuSFvpKHEFXfTw33yHzZtFU9aB2durUmAOf9DEvKwPzesk1v5vhx3odtjZSq/N5ucERM4jVFXdtYNMzaanDt6TvEtyO+xTU3nDfqy9F8a11qIbr/LdqhGbRVL5GwAWeZLNooFk0W9s5jUAH6qK28juqpsN0XMzvZsFN0KpmqDgjnozjCPRi+GQoldXFrgCg2hvui+nQ0Ldm0cBKq7J8opjfzSraPqso2uK4jGbDEPDZnhYKLRydQXAGqSLzu5mYMaCRYyFI1jQIvW54Y8U0N7FI1ahZwqrU0C6uOMFcoV+rc40Ob4tJ3xX21mnX+ZwxALm0SlxDBDQGwDcOIMVlPiTeoMs63HRmCt6ri0tjHIBu35SLd3VxCT4FsCs6HGTprNjY9QUv2tLhplVDyOUt3TcdCVptGnJ5S/dNRwKrq5qvE2WIs6XKri940ZYON17T65mcS9T9UunDSi5t6HBgnFUtZ1SvbiEKCfqmw4m2RtDd4SZjoC+ocJ/Unq/O4dJn26euk8KWIdiqep8mIKSZMK0PQS+KLhbAJ40UHZ3TZ5d0JNhqGnL1fH29pSk2j1wuHdOd2RUdKYyrvFFo4KYpgJP+73PRXD76iM0tGxyxAJy44hp885OiI4lzHEE6clgqpgGUAnLp2IzNpUPJpcPNIzBU5Rw9X1eACygOHCHG8Oz5U6fLvISOLk+58pMFfPtncpO2uU6r22LefftMLYs+D/S9/qeuIwZ1eDD5x6sZUrcnZsZ28XTnmoKXDoNWrvxEsxFGzhXuZlpAyoXt0ZXb3UqnJeXSpXo0SzvjxrDuLGL7Jx2dbIJzqLprWqmTbOVgY0CJe63E0GNy0VetFLSPj6k9365Ve22xK7UB2N4+roxhXTOY4Fi6rgvNwt5wHz7/7Jtqfvc9m5auNpDQ4cA68yrG4XOkZ0MNedsb7oNU58oUipajMyqhw4WxRri9vtlwsHCRuoQdrmNIAj+W8NEHMDpNEziEjmlz36X43kFn0F2lM17MK+idUo0m43UhceuMJuONcL6ffuRtEvCuxwixZtF0siZAjIYQEnaWWt25juUsJOz7rH5Wo8lYwtA29KiBS2qJ0FZI1YuXr9ffR5Pxkv7mgg7pSoTA4TnTtCXykZUc4Vt90WhDKwsx4VspOr5hbymhaJIaEHnNumAMxj5CLgdWerwt7E3dL/biUQ1bGj77+Gj5FnTbxtD6wh1Fp8Mhb30LEeubjgStLtxRdOJ0JGh94Y6i0/GQN0rfQsT6psOBdYhZ58BqexMZ64kspaNWsxw6Npd2Lp1OurNzI5lJNW2T13FhG+Ps7K6p4F2haDgVPGjC5WnhSOpQPS4d2+Mdp45Li5uNPsI0YHkdiikUDV8mqf6L1CUuJm2Tjgrq+i524aNj8sX0DXkL0XEmxoi2s+gTiOnKEF2oymTZHAGfdNEtVYc2DVw6truUMz+5B5aMdxLHwh2mO4jOsCK+CMWKvulwY11iJyZTvsvSUIpOnA4nQRZu2Wf9PTYjRadd76VQcVMHhjsTRScz3guA2l6ofPnlP1ncybBvYooFOD49YetEObyMOSTWjCbjrTxJ6KTgNaDkeqv217/9N/lRBzVsASGcU9XmGtPflSAXpyH4vFpNvagh085waNWDOkvh5AzcScVqCLbqkwtqBHvDfVHf/9FkvI43kATnmbAZgcSCJylY+wir1U4qGh2Eruu+i1e50I0MYtpqgEgqVMdnQbFYsB/z4uVr+M///mW8Tl0KkPXqI2CMA41fmN/NKlwSJ8VX3/TYhFpStYRpeULOO/WnH7+Hzz/7RiwP2bEt0yO1NI4u3dFkvKwHNXusA+YPvYq58/Ti5Wt48fK1uE4WdBdfso0zFTb32lFq2pIu5tQgcNngrvQTOjOgEcJq1E7k3KmRSWiggWPfoavR0YUV0tU2bSp2sokoFAqFQqFQKBQKhULBQO9mACmEk2vWlEK7WGdMqQe107HCd79Ct2l9xpRCN2h1xpRCd2h1xpRCd2h9xpRCN+jUjCmF9rAaQrNoWl+zuJCHoBlThk/2nFPAxE6fU2iXR6B5VDQt8EVXMcVCp4VPt3MsElbIx7ppQGM4Pj3x6uj5zPwRutJboT0eAXnmPz49Aa4RQtsSuoXuYZxMi2PGlNbXOS54o51MC3/HrP9IZ/7AuY0KOwyu4BK72HWhJ2DUT8ByPoUdxjmy6LPcXtdm/yiEox1QCp3lo2ux/oUEcHIHnz6B9Epvhfz8H9/U65qpagpsAAAAAElFTkSuQmCC';
+const IMG_MINE = '';
+
+/* ============ 原站动作定义（MONA_CLIPS）============
+   start  全图线性起始帧号（0 起）
+   count  帧数
+   ms     每帧时长
+   loopTo 序列播完回到第几帧（相对本动作）—— 原站 advance(ms, loopTo)
+=================================================== */
+const PRESETS = {
+  mona: {
+    label: 'Mona 5×5',
+    url: IMG_MONA,
+    cols: 5, rows: 5, fw: 26, fh: 27, zoom: 3,
+    clips: [
+      { name: 'Idle',     color: 'var(--c0)', start: 0,  count: 5, ms: 200, loopTo: 0, note: L('站立待机，呼吸/眨眼循环', 'Standing idle — breathing, blinking') },
+      { name: 'Walk',     color: 'var(--c1)', start: 5,  count: 5, ms: 60,  loopTo: 0, note: L('地面移动', 'Moving along the ground') },
+      { name: 'Jump_Up',  color: 'var(--c2)', start: 10, count: 4, ms: 60,  loopTo: 2, note: L('上升中（起跳后先播第 1 帧）', 'Rising — frame 2 plays first on launch') },
+      { name: 'JumpDown', color: 'var(--c3)', start: 15, count: 4, ms: 60,  loopTo: 2, note: L('下落中', 'Falling') },
+      { name: 'Land',     color: 'var(--c4)', start: 20, count: 1, ms: 60,  loopTo: 0, note: L('落地瞬间，只播 1 帧', 'The landing beat — one frame only') },
+    ],
+  },
+  mine: {
+    label: '我的角色 4×3',
+    url: IMG_MINE,
+    cols: 3, rows: 4, fw: 128, fh: 128, zoom: 1,
+    clips: [
+      { name: 'Idle',   color: 'var(--c0)', start: 0, count: 3, ms: 200, loopTo: 0, note: '第 1 行（先猜是待机，可改）' },
+      { name: 'Walk',   color: 'var(--c1)', start: 3, count: 3, ms: 120, loopTo: 0, note: '第 2 行' },
+      { name: 'Walk B', color: 'var(--c2)', start: 6, count: 3, ms: 120, loopTo: 0, note: '第 3 行' },
+      { name: 'Crouch', color: 'var(--c3)', start: 9, count: 3, ms: 120, loopTo: 0, note: '第 4 行（蹲/收腿）' },
+    ],
+  },
+};
+
+const state = {
+  key: 'mona',
+  url: IMG_MONA,
+  img: null,
+  cols: 5, rows: 5, fw: 26, fh: 27, zoom: 3,
+  clips: [],
+};
+
+/* ============ 工具 ============ */
+const $ = (s) => document.querySelector(s);
+const el = (t, cls) => { const e = document.createElement(t); if (cls) e.className = cls; return e; };
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+function frameAt(n) {          // 线性帧号 → {col,row}
+  return { col: n % state.cols, row: Math.floor(n / state.cols) };
+}
+
+/* 载入图片 */
+function loadImg(url, cb, onerr) {
+  const im = new Image();
+  im.onload = () => cb(im);
+  im.onerror = () => { if (onerr) onerr(); };
+  im.src = url;
+}
+
+/* ============ 1. 解剖视图 ============ */
+function drawSheet() {
+  const cv = $('#sheetCanvas');
+  const im = state.img;
+  if (!im) return;
+  const s = Math.max(1, Math.floor(560 / Math.max(im.naturalWidth, 1)));
+  cv.width = im.naturalWidth * s;
+  cv.height = im.naturalHeight * s;
+  const ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(im, 0, 0, cv.width, cv.height);
+
+  // 每格用途查表
+  const use = new Map();
+  state.clips.forEach((c) => {
+    for (let i = 0; i < c.count; i++) {
+      const n = c.start + i;
+      const p = frameAt(n);
+      if (p.row < state.rows && p.col < state.cols) use.set(n, { clip: c, idx: i });
+    }
+  });
+
+  const total = state.cols * state.rows;
+  for (let n = 0; n < total; n++) {
+    const { col, row } = frameAt(n);
+    const x = col * state.fw * s, y = row * state.fh * s;
+    const w = state.fw * s, h = state.fh * s;
+    const u = use.get(n);
+    // 底色
+    if (!u) {
+      ctx.fillStyle = 'rgba(90,96,110,.30)';
+      ctx.fillRect(x, y, w, h);
+    } else {
+      ctx.fillStyle = hexA(getComputedStyle(document.documentElement).getPropertyValue(u.clip.color.slice(4, -1)).trim() || '#666', .09);
+      ctx.fillRect(x, y, w, h);
+    }
+    // 边框
+    ctx.strokeStyle = u ? getComputedStyle(document.documentElement).getPropertyValue(u.clip.color.slice(4, -1)).trim() || '#666' : '#454b58';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + .5, y + .5, w - 1, h - 1);
+    // 编号 + 帧序号（都带深色胶囊底，深浅背景都清晰）
+    const pad = Math.max(3, s * 1.5);
+    const ff = getComputedStyle(document.body).fontFamily;
+    const fs = Math.max(9, s * 3);
+    ctx.font = `${fs}px ${ff}`;
+    ctx.textBaseline = 'top';
+    const label = String(n);
+    const tw = ctx.measureText(label).width;
+    ctx.fillStyle = 'rgba(8,10,14,.80)';
+    ctx.beginPath();
+    ctx.roundRect(x + pad - 3, y + pad - 2, tw + 6, fs + 4, 3);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillText(label, x + pad, y + pad);
+    if (u && s >= 3) {
+      const fs2 = Math.max(8, s * 2.6);
+      ctx.font = `${fs2}px ${ff}`;
+      const t2 = '#' + (u.idx + 1);
+      const w2 = ctx.measureText(t2).width;
+      const cCol = getComputedStyle(document.documentElement).getPropertyValue(u.clip.color.slice(4, -1)).trim() || '#888';
+      ctx.fillStyle = 'rgba(8,10,14,.80)';
+      ctx.beginPath();
+      ctx.roundRect(x + pad - 3, y + h - pad - fs2 - 2, w2 + 6, fs2 + 4, 3);
+      ctx.fill();
+      ctx.fillStyle = cCol;
+      ctx.fillText(t2, x + pad, y + h - pad - fs2 - 1);
+    }
+  }
+  renderLegend();
+}
+
+function hexA(hex, a) {
+  const h = hex.replace('#', '');
+  const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(f, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+function renderLegend() {
+  const ul = $('#legend');
+  ul.innerHTML = '';
+  state.clips.forEach((c) => {
+    const li = el('li');
+    const sw = el('span', 'sw');
+    sw.style.background = getComputedStyle(document.documentElement).getPropertyValue(c.color.slice(4, -1)).trim() || '#888';
+    const box = el('div');
+    const b = el('b'); b.textContent = c.name;
+    const meta = el('div', 'meta'); meta.textContent = c.note || '';
+    box.append(b, meta);
+    const f = el('span', 'frames');
+    f.textContent = L(c.count === 1 ? `帧 ${c.start}` : `帧 ${c.start}–${c.start + c.count - 1}`, c.count === 1 ? `frame ${c.start}` : `frames ${c.start}–${c.start + c.count - 1}`);
+    li.append(sw, box, f);
+    ul.append(li);
+  });
+  const used = state.clips.reduce((a, c) => a + c.count, 0);
+  const total = state.cols * state.rows;
+  const li = el('li');
+  const sw = el('span', 'sw'); sw.style.background = '#454b58';
+  const box = el('div');
+  const b = el('b'); b.textContent = L('未使用', 'Unused');
+  const meta = el('div', 'meta'); meta.textContent = L('原站代码从未取用这些格子', 'the original’s code never reads these');
+  box.append(b, meta);
+  const f = el('span', 'frames'); f.textContent = `${total - used} 格`;
+  li.append(sw, box, f);
+  ul.append(li);
+}
+
+/* ============ 2. 播放器 ============ */
+const players = [];
+
+function buildStage() {
+  const stage = $('#stage');
+  stage.innerHTML = '';
+  players.length = 0;
+  state.clips.forEach((c) => {
+    const card = el('div', 'player');
+    card.style.setProperty('--acc', getComputedStyle(document.documentElement).getPropertyValue(c.color.slice(4, -1)).trim() || '#888');
+    const head = el('div', 'phead');
+    const b = el('b'); b.textContent = c.name;
+    const sp = el('span'); sp.textContent = `${c.count} 帧 · ${c.ms}ms`;
+    head.append(b, sp);
+    const body = el('div', 'pbody');
+    const cv = el('canvas');
+    body.append(cv);
+    const bar = el('div', 'frames-bar');
+    const dots = [];
+    for (let i = 0; i < Math.max(c.count, 1); i++) { const d = el('div', 'fb'); bar.append(d); dots.push(d); }
+    const foot = el('div', 'pfoot');
+    card.append(head, body, bar, foot);
+    stage.append(card);
+
+    players.push({ clip: c, cv, ctx: cv.getContext('2d'), dots, foot, idx: 0, acc: 0 });
+  });
+  sizePlayers();
+}
+
+function sizePlayers() {
+  const im = state.img;
+  if (!im) return;
+  // 让每帧显示高度接近 96px
+  const dispZoom = clamp(Math.round(96 / state.fh), 1, 12);
+  players.forEach((p) => {
+    p.cv.width = state.fw;
+    p.cv.height = state.fh;
+    p.cv.style.width = state.fw * dispZoom + 'px';
+    p.cv.style.height = state.fh * dispZoom + 'px';
+    p.ctx.imageSmoothingEnabled = false;
+  });
+}
+
+let last = performance.now();
+function tick(now) {
+  const dt = Math.min(now - last, 120);
+  last = now;
+  players.forEach((p) => {
+    const c = p.clip;
+    p.acc += dt;
+    while (p.acc >= c.ms) {
+      p.acc -= c.ms;
+      p.idx = p.idx + 1 < c.count ? p.idx + 1 : clamp(c.loopTo, 0, c.count - 1);
+    }
+    drawPlayerFrame(p);
+  });
+  requestAnimationFrame(tick);
+
+  /* 语言切换后由导航条派发的 unv-lang 事件驱动重画 */
+  window.UNV_REFRESH = function () { try { drawSheet(); buildStage(); syncControls(); } catch (e) { /* ignore */ } };
+}
+
+function drawPlayerFrame(p) {
+  const im = state.img;
+  if (!im) return;
+  const n = p.clip.start + p.idx;
+  const { col, row } = frameAt(n);
+  const ctx = p.ctx;
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, p.cv.width, p.cv.height);
+  if (col >= state.cols || row >= state.rows) { p.foot.textContent = `帧 ${n} 超出图集范围`; return; }
+  ctx.drawImage(im, col * state.fw, row * state.fh, state.fw, state.fh, 0, 0, state.fw, state.fh);
+  p.dots.forEach((d, i) => d.classList.toggle('on', i === p.idx));
+  p.foot.textContent = L(`当前 帧 ${n}（本动作第 ${p.idx + 1}/${p.clip.count} 帧）`, `frame ${n} · ${p.idx + 1} of ${p.clip.count}`);
+}
+
+/* ============ 3. 控件 ============ */
+function syncControls() {
+  $('#cols').value = state.cols;
+  $('#rows').value = state.rows;
+  $('#fw').value = state.fw;
+  $('#fh').value = state.fh;
+  $('#zoom').value = state.zoom;
+  const info = $('#imgInfo');
+  if (info) info.textContent = state.img
+    ? `当前图：${state.img.naturalWidth}×${state.img.naturalHeight}px · 切片 ${state.cols}×${state.rows} · 每帧 ${state.fw}×${state.fh}`
+    : '';
+  document.querySelectorAll('[data-preset]').forEach((b) => b.classList.toggle('on', b.dataset.preset === state.key));
+  renderClipRows();
+}
+
+function renderClipRows() {
+  const tb = $('#clipRows');
+  tb.innerHTML = '';
+  state.clips.forEach((c, i) => {
+    const tr = el('tr');
+    const mk = (html) => { const td = el('td'); td.innerHTML = html; return td; };
+    tr.append(mk(`<input type="text" value="${c.name}" data-i="${i}" data-k="name">`));
+    tr.append(mk(`<input type="number" value="${c.start}" min="0" data-i="${i}" data-k="start">`));
+    tr.append(mk(`<input type="number" value="${c.count}" min="1" data-i="${i}" data-k="count">`));
+    tr.append(mk(`<input type="number" value="${c.ms}" min="10" step="10" data-i="${i}" data-k="ms">`));
+    tr.append(mk(`<input type="number" value="${c.loopTo}" min="0" data-i="${i}" data-k="loopTo">`));
+    const td = el('td');
+    const del = el('button', 'btn');
+    del.textContent = '删除';
+    del.style.padding = '4px 9px';
+    del.onclick = () => { state.clips.splice(i, 1); refreshAll(); };
+    td.append(del);
+    tr.append(td);
+    tb.append(tr);
+  });
+}
+
+$('#clipRows').addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t.dataset || !t.dataset.k) return;
+  const c = state.clips[+t.dataset.i];
+  const v = t.dataset.k === 'name' ? t.value : clamp(Number(t.value) || 0, 0, 9999);
+  c[t.dataset.k] = v;
+  drawSheet(); buildStage();
+});
+
+$('#addClip').onclick = () => {
+  const i = state.clips.length;
+  state.clips.push({ name: 'Clip ' + (i + 1), color: 'var(--c5)', start: 0, count: 1, ms: 120, loopTo: 0, note: '' });
+  refreshAll();
+};
+
+['cols', 'rows', 'fw', 'fh'].forEach((k) => {
+  $('#' + k).addEventListener('input', (e) => {
+    state[k] = clamp(Number(e.target.value) || 1, 1, 64);
+    syncControls(); drawSheet(); buildStage();
+  });
+});
+$('#zoom').addEventListener('input', (e) => {
+  state.zoom = clamp(Number(e.target.value) || 1, 1, 12);
+  sizePlayers();
+});
+
+/* 预设 */
+function applyPreset(key, keepUrl) {
+  const p = PRESETS[key];
+  if (!p) return;
+  state.key = key;
+  state.cols = p.cols; state.rows = p.rows; state.fw = p.fw; state.fh = p.fh; state.zoom = p.zoom;
+  state.clips = p.clips.map((c) => ({ ...c }));
+  loadImg(p.url, (im) => { state.img = im; refreshAll(); });
+}
+document.querySelectorAll('[data-preset]').forEach((b) => {
+  b.onclick = () => applyPreset(b.dataset.preset);
+});
+$('#reset').onclick = () => applyPreset('mona');
+
+/* 这个项目只做素材解剖，没有上传入口。 */
+function refreshAll() {
+  syncControls();
+  drawSheet();
+  buildStage();
+  applyBg();
+}
+
+/* 启动 */
+applyPreset('mona');
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

@@ -1,0 +1,620 @@
+/* 原站 chunk 4963（ba03741f5205bf29.css）逐条翻译，仅把 Primer 的 CSS 变量替换为具体值 */
+
+.wrapper {
+  position: relative;
+  overflow: hidden;
+  box-sizing: content-box;
+  width: 100%;
+  isolation: isolate;
+  font-family: var(--font-mona-sans);
+  aspect-ratio: var(--grid-x-narrow) / var(--grid-y);
+}
+
+@media (min-width: 1012px) {
+  .wrapper {
+    aspect-ratio: var(--grid-x) / var(--grid-y);
+  }
+}
+
+.wrapper canvas {
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fallbackImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hud {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: 20px;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin: 0;
+  font-weight: 700;
+  pointer-events: none;
+  animation: hudEnter 0.45s ease-out both;
+}
+
+.lives {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 62px;
+  min-height: 20px;
+}
+
+.heart {
+  width: 18px;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+/* 操作提示整行。原站不给字号（继承 16px），压在 22px 的键帽旁边偏大；
+   收成 13px，让「← → move · Space jump」读起来是一整句而不是四块东西。 */
+/* 操作提示整行。原站不给字号（继承 16px），压在 22px 的键帽旁边偏大；
+   收成 13px，让「← → move · Space jump」读起来是一整句而不是四块东西。
+
+   位置：**画布下面那条栏**里居中。它原来占着 HUD 的第二栏（顶部中间），而那一栏
+   现在归分数了；试过挪到画面底部，正好压在角色和地面上 —— 栏的中间在游戏中恰好
+   空着（PLAY 只在待机和结算时出现，EXIT 靠右）。 */
+.controls {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  color: #4a524e;
+  font-size: 13px;
+  text-align: center;
+  white-space: nowrap;
+  transition: opacity 0.35s ease-in, transform 0.35s ease-in;
+}
+
+/* 按过任意一个游戏键就淡出。早先是靠位移（滑出画面）隐藏的，但那和顶部条里的
+   静态排布打架 —— 改成纯淡出，两种版式通用。 */
+.controlsHidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* 键盘**真正按下**时键帽跟着沉下去 —— 手指的动作和画面里的提示是同一件事，
+   而不是各说各的。松开自动弹回（过渡在 `.controlKey` 上）。 */
+.controlKeyDown {
+  background: #0d1117;
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+/* ---- 顶部信息条（`topBar` 版式，实验室专用） ----
+   分数居中、按键指引在右半区的中间、音效开关贴最右。
+
+   ⚠️ 它挂在 wrapper **外面**：wrapper 带 `overflow: hidden`（要裁画布的圆角与
+   缩放误差），放在里面 `bottom: 100%` 也会被整个裁掉 —— 试过，页面上什么都没有。
+   负 `margin-top` 让它不占位：`justify-content: center` 下总高不变，画布位置一点
+   不动，它自己浮在上方那段留白里（那段留白本来一直浪费着）。
+   独立站没有这条留白（画布上方紧挨着导航），那边不开这个版式。 */
+.topBar {
+  position: relative;
+  height: 34px;
+  margin-top: -34px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* 三样东西绝对定位在同一条水平线上：50% / 75% / 右端 */
+.topBar .score,
+.topBarKeys,
+.topBar .soundToggle {
+  position: absolute;
+  top: 50%;
+  pointer-events: auto;
+}
+
+.topBar .score {
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.topBarKeys {
+  left: 75%;
+  transform: translate(-50%, -50%);
+}
+
+.topBar .soundToggle {
+  right: 0;
+  transform: translateY(-50%);
+}
+
+/* 左上角那枚 `TOP` —— 看榜入口。
+   它和结算时那枚金色 SUBMIT 是一对：同一个像素字模、同样没有底和边，位置一左一右。
+   区别在于它**不进游戏也能点**：SUBMIT 要玩完一局才出现，而排行榜本身是所有访问者
+   都能看的。 */
+.topBarRank {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: filter 0.28s ease-out;
+}
+
+.topBarRank:hover,
+.topBarRank:focus-visible {
+  filter: brightness(1.1) saturate(1.1);
+  --pixel-gleam-dur: 1.25s;
+  --pixel-gleam-stagger: 11ms;
+}
+
+.topBarRank:focus-visible {
+  outline: 2px solid #e8b44a;
+  outline-offset: 3px;
+}
+
+/* 窄屏下顶部条不开，`TOP` 搬到下面那条栏里（`SuperMona.jsx` 里换了个渲染点）。
+   靠右放，和游戏中的 EXIT（窄屏下改成跟着 flex 流排、靠左）错开。 */
+.actionsRank {
+  position: absolute;
+  right: var(--site-spacing, 24px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: filter 0.28s ease-out;
+}
+
+.actionsRank:hover,
+.actionsRank:focus-visible {
+  filter: brightness(1.1) saturate(1.1);
+  --pixel-gleam-dur: 1.25s;
+  --pixel-gleam-stagger: 11ms;
+}
+
+.actionsRank:focus-visible {
+  outline: 2px solid #e8b44a;
+  outline-offset: 3px;
+}
+
+/* 条里的按键指引按静态流排 —— 外面那条规则带绝对定位，是给「栏内居中」用的 */
+.topBarKeys .controls {
+  position: static;
+  transform: none;
+}
+
+/* ---- 触屏虚拟按键 ---- */
+/* 摆在画布**下面**，不叠在画布上：窄屏的 Wrapper 按 67:26 算出来只有 140px 高，
+   56px 的按键压上去会吃掉小半屏。方向键在左、跳跃在右，按手游的习惯摆。
+   `touch-action: none` 必须写，否则按住按键会被浏览器当成滚动页面。 */
+.touchPad {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px var(--site-spacing) 0;
+}
+
+.touchGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.touchKey {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid rgb(0 0 0 / 0.1);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.74);
+  color: #0d1117;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.07);
+  font-family: var(--brand-fontStack-sansSerif);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touchKey:active {
+  background: #0d1117;
+  border-color: #0d1117;
+  color: #fff;
+  box-shadow: none;
+}
+
+.touchJump {
+  font-size: 22px;
+}
+
+.controlAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 操作键帽。
+   原站是 Primer 风格的白底圆角键帽（`padding:12px` 还把键帽撑得比字还高），
+   压在浅色网格上偏「浮」，圆角也和这个画面的方块语言不搭。改成画面同款的
+   实心方角小块 —— 和地形方块同一套视觉，一眼就知道是「这个游戏里的东西」。
+   尺寸收成固定的 22px，底下压一道 2px 内阴影做键帽的厚度。
+   ⚠️ 字体用的是本站的 `--site-fontStack-monospace`（Mona Sans Mono）：原站写的
+   是它自己 page.css 里的 `--font-mono`，那个变量这边没有，会静默掉回默认字体。 */
+.controlKey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 2px;
+  background: #4a4f4c;
+  color: #e9edec;
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.22);
+  font-family: var(--site-fontStack-monospace);
+  font-size: 12px;
+  font-weight: 425;
+  line-height: 1;
+  /* 按下 / 松开要跟手 —— 快了才像物理键帽，慢了就成了动画 */
+  transition: background-color 0.08s ease-out, box-shadow 0.08s ease-out,
+    transform 0.08s ease-out;
+}
+
+.score {
+  white-space: nowrap;
+}
+
+.scoreControls {
+  display: flex;
+  align-items: center;
+  /* 中间那一栏 —— 用户要求分数「放在中间顶部」。原来是最右（`end`），
+     紧挨着音效开关，看着像那枚开关的附注。 */
+  justify-self: center;
+  gap: 16px;
+}
+
+/* 音效开关：右上角，**待机时也在**。原站把它放在游戏中那排 HUD 的第三格里，
+   而 HUD 只在游戏进行中存在 —— 于是没开局的时候整页找不到声音开关。
+   视觉仍是原站那枚 32×32 的白方块，只补定位。 */
+.soundToggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  color: #000;
+  background: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+ * 竖屏提示
+ * ------------------------------------------------------------------------ */
+
+/* 只盖住画布这一块，不盖整页。一进网站就全屏要求横屏，别人连这是个什么站
+   都还没看明白 —— 而需要横屏的是**游戏**，不是这个页面。 */
+.rotateHint {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+  background: #e9edec;
+  color: #14161a;
+  text-align: center;
+}
+
+.rotateHintPhone {
+  position: relative;
+  width: 30px;
+  height: 50px;
+  border: 2px solid currentColor;
+  border-radius: 7px;
+  animation: monaTilt 2.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+
+/* 底部那道短横，转起来才看得出是台手机 */
+.rotateHintPhone::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 11px;
+  height: 2px;
+  margin-left: -6px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.rotateHintText {
+  font-family: var(--site-fontStack-monospace);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+}
+
+@keyframes monaTilt {
+  0%,
+  18% {
+    transform: rotate(0deg);
+  }
+  46%,
+  72% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotateHintPhone {
+    animation: none;
+    transform: rotate(-90deg);
+  }
+}
+
+.soundToggle:hover {
+  color: #fff;
+  background: #777;
+}
+
+.soundToggle:focus-visible {
+  outline: none;
+  color: #000;
+  background: #fff;
+}
+
+.soundToggle > svg {
+  width: 20px;
+  height: 20px;
+}
+
+.gameOverScoreBoard {
+  position: absolute;
+  top: calc(3 / var(--grid-y) * 100% + 1px);
+  left: calc(50% + var(--score-board-offset-x) / var(--grid-x) * 100%);
+  z-index: 1;
+  width: calc(21 / var(--grid-x) * 100% + 1px);
+  aspect-ratio: 21 / 8;
+  color: #000;
+  pointer-events: none;
+  transform: translate(-50%);
+  container-type: inline-size;
+}
+
+.gameOverScoreContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  text-align: center;
+}
+
+.gameOverScoreLabel {
+  font-size: 4cqw;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.gameOverScore {
+  margin-top: 4cqw;
+  font-size: min(14cqw, calc(48cqw / var(--score-character-count)));
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.actions {
+  /* 动作按钮（`.pixelPlay` 等）绝对定位在这一层里 —— 它们不占 flex 的位置，
+     眉标该多宽还是多宽 */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid var(--site-color-border);
+  padding: var(--site-spacing);
+}
+
+/* 原站在窄屏 / 触屏上把整条 actions 藏掉 —— 那是个真 CTA，手机上让位给布局。
+   实验里不能这么干：藏了按钮就等于开不了局。改成窄屏下竖排、撑满、间距收紧。 */
+@media (hover: none) and (pointer: coarse), (max-width: 1011px) {
+  /* HUD 的三栏 grid（生命 / 键盘提示 / 分数）在 390px 宽下挤成一团，
+     分数直接被顶出屏幕。窄屏改成两栏 flex —— 中间那栏本来就要隐藏。 */
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    left: 14px;
+    right: 14px;
+  }
+
+  /* 已经有虚拟按键了，键盘提示是重复信息，窄屏让位 */
+  .controls {
+    display: none;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding-top: 4px;
+  }
+
+  /* 眉标在窄屏下用 16px 会横着溢出，收到 12px；`> div` 是 Eyebrow 的 Labels */
+  .heroEyebrow > div {
+    font-size: 12px;
+  }
+
+  /* 窄屏下按钮不再绝对定位 —— 眉标那一行会折行，绝对居中正好叠在它上面。
+     改成跟着 flex 流排，居中即可。 */
+  .actions .pixelPlay,
+  .actions .pixelPlayAgain,
+  .actions .pixelExit,
+  .actions .submitBadge {
+    position: static;
+    transform: none;
+    align-self: center;
+  }
+}
+
+.heroEyebrow {
+  flex: 1 1;
+  min-width: 0;
+}
+
+/* Eyebrow 根 div 里的第二层（Labels）—— 原 `.WebGLSuperMona_HeroEyebrow >div` */
+.heroEyebrow > div {
+  gap: 4px;
+}
+
+/* LabelLeft / LabelRight */
+.heroEyebrow > div > div {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* 像素动作字的位置。外观全在 `PixelAction.module.css` —— 它没有底、没有边，
+   这里只负责把它放对地方。
+
+   三个状态都待在**画布下面那条栏**里，不进画面：`PLAY` / `PLAY AGAIN` 居中、
+   `EXIT` 靠右。放画面里会干扰这一屏的主角 —— 待机时是那颗转头看你的 Mona，
+   游戏中是那局跑酷本身。 */
+.pixelPlay,
+.pixelPlayAgain {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pixelExit {
+  position: absolute;
+  right: var(--site-spacing, 24px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* 结算时那枚「上传成绩」的金色指示。
+   坐标与 `.pixelExit` 完全相同 —— 结算时 EXIT 不出现，这个位置正好空着，不用
+   为它再挤地方。金色和闪光都在 `PixelWord` 的 gold 档里，这里只管位置，外加
+   一点上下浮动的「来点我」的意思。 */
+.submitBadge {
+  position: absolute;
+  right: var(--site-spacing, 24px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  animation: submitFloat 2.6s ease-in-out infinite;
+  transition: filter 0.28s ease-out, transform 0.28s ease-out;
+}
+
+/* 悬浮：整体提亮、金色更饱和，波形走快一点（像被点着的金属），位置只上浮 3px。
+   **刻意不用 scale** —— 放大是「按钮」的手感，而这行字不是按钮；更要紧的是缩放会把
+   刚刚贴齐像素的方块又推到半像素上，越悬越糊。那两个 `--pixel-gleam-*` 变量是
+   `PixelWord` 读的（见 `PixelWord.module.css`），动画周期不能由变量给名字，但能由变量给时长。 */
+.submitBadge:hover,
+.submitBadge:focus-visible {
+  animation: none;
+  transform: translateY(calc(-50% - 3px));
+  filter: brightness(1.1) saturate(1.1);
+  --pixel-gleam-dur: 1.25s;
+  --pixel-gleam-stagger: 11ms;
+}
+
+.submitBadge:focus-visible {
+  outline: 2px solid #e8b44a;
+  outline-offset: 4px;
+}
+
+@keyframes submitFloat {
+  0%,
+  100% {
+    transform: translateY(-50%);
+  }
+  50% {
+    transform: translateY(calc(-50% - 4px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .submitBadge {
+    animation: none;
+  }
+}
+
+/* ---- 矮屏 / 窄屏：把「画布以下」的那几块压薄 ----
+   横屏手机上整块实验区只有两三百像素高，而画布宽度是按**剩下的高度**反推的
+   （见 `mona.css` 的 `calc((100cqh - Npx) * 67 / 26)`）。所以下面这条栏每多
+   1px 内边距，画布就少 2.6px 宽 —— 把用不到的空隙收掉，画布能大一圈。
+   触控目标本身（56px 的虚拟按键）不动，那是可用性的底线。 */
+@media (max-width: 1011px), (max-height: 700px) {
+  .actions {
+    padding: 10px var(--site-spacing);
+  }
+
+  .touchPad {
+    padding-top: 8px;
+  }
+
+  /* 窄屏下 HUD 从三栏 grid 变成两栏 flex（生命 / 分数），分数因此贴到了右端 ——
+     正好压在上方那枚 32px 的音效开关上（实测「Your score: 0」被它盖掉一半）。
+     把 HUD 的右边界往里收，让开开关的宽度 + 它的 10px 边距。 */
+  .hud {
+    right: 52px;
+  }
+}
+
+@keyframes hudEnter {
+  0% {
+    transform: translateY(calc(-100% - 16px));
+  }
+  to {
+    transform: translateY(0);
+  }
+}

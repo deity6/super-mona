@@ -1,0 +1,19 @@
+# ---- 依赖与产物 ----
+node_modules
+dist
+dist-ssr
+.vite
+*.local
+.DS_Store
+Thumbs.db
+
+# ---- Cloudflare Pages 的本地配置 ----
+#  里面是项目名与绑定信息，随部署环境走，不进仓库。
+.wrangler/
+
+# ---- 验收/调试产物 ----
+#  `_verify.log` 是本机跑无头浏览器验收时落下的测量日志（本地 URL、元素坐标），
+#  对读代码的人没有价值。
+_verify.log
+*.log
+npm-debug.log*

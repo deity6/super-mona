@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Super Mona · a githubuniverse.com recreation</title>
+  <style>
+    /* 与三个静态子页同一套导航样式（见 _gu/inject-universe.mjs，两边要一起改） */
+    .unv-nav{position:sticky;top:0;z-index:9999;display:flex;align-items:center;gap:18px;
+      height:46px;padding:0 20px;background:#0f1116;color:#e7e9ef;
+      font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      border-bottom:1px solid #262b34;box-sizing:border-box}
+    .unv-nav a{color:#9aa4b2;text-decoration:none;transition:color .15s}
+    .unv-nav a:hover{color:#e7e9ef}
+    .unv-nav a.is-here{color:#5fed83}
+    .unv-nav__brand{color:#e7e9ef!important;letter-spacing:.04em}
+    .unv-nav__brand i{font-style:normal;color:#5fed83}
+    .unv-nav__sep{width:1px;height:16px;background:#2b313c}
+    .unv-nav__spacer{flex:1}
+    /* 语言切换：不要做成带框的按钮 —— 它是个轻量的开关，不是一个操作。
+       无框文字 + 悬停时下划线由左滑入，跟这一行的链接同一个语言。 */
+    .unv-nav__lang{position:relative;background:none;border:0;padding:0;color:#9aa4b2;
+      font:inherit;letter-spacing:.04em;cursor:pointer;transition:color .15s}
+    .unv-nav__lang::after{content:'';position:absolute;left:0;right:0;bottom:-3px;height:1px;
+      background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .2s}
+    .unv-nav__lang:hover{color:#5fed83}
+    .unv-nav__lang:hover::after{transform:scaleX(1)}
+    @media (max-width:640px){.unv-nav{gap:11px;padding:0 12px;font-size:12px}.unv-nav__sep{display:none}}
+  </style>
+</head>
+<body>
+  <nav class="unv-nav" aria-label="Project">
+    <a class="unv-nav__brand" href="./">SUPER<i>MONA</i></a>
+    <span class="unv-nav__sep"></span>
+    <a href="./" data-en="Game">游戏</a>
+    <a href="./breakdown.html" data-en="Breakdown">拆解</a>
+    <a href="./sprite.html" data-en="Sprite sheet">精灵表</a>
+    <a href="./trail.html" data-en="Cursor trail">拖尾</a>
+    <span class="unv-nav__spacer"></span>
+    <button class="unv-nav__lang" id="unvLang" type="button">中文</button>
+  </nav>
+
+  <div class="page">
+    <div class="topbar">
+      <span class="dot"></span>
+      <span>super-mona/</span>
+      <span class="spacer"></span>
+      <span data-en="a full recreation of the original">githubuniverse.com 完整复刻</span>
+    </div>
+
+    <h1>Super Mona<span>/</span></h1>
+    <p class="lead" data-en="Three canvases, two render pipelines · a GLB model that follows your cursor while idle · a 94×26 InstancedMesh block runner once you press play">
+      三个 Canvas 与两套渲染管线 · 待机是 GLB 模型 + 鼠标跟随 · 开局后是 94×26 InstancedMesh 方块跑酷
+    </p>
+
+    <main class="stage" id="root"></main>
+
+    <div class="notes">
+      <h2 data-en="How to play">玩法</h2>
+      <table>
+        <tr>
+          <th data-en="Key">操作</th>
+          <th data-en="What it does">行为</th>
+          <th data-en="Points">分值</th>
+        </tr>
+        <tr>
+          <td class="mono">← → / A D</td>
+          <td data-en="Move left and right">左右移动</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td class="mono">Space</td>
+          <td data-en="Jump (double jump). Rising into a block smashes it.">跳跃，可二段跳；上升时顶到方块会把它撞碎</td>
+          <td>+10</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Gold pickup">金色拾取物</td>
+          <td data-en="Ten seconds of Super: invulnerable, double points, rainbow, bugs break on contact">吃到进入 Super 10 秒：无敌、分数翻倍、彩虹色、撞碎虫子</td>
+          <td data-en="+100 (doubled in Super)">+100（Super 时翻倍）</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Normal pickup">普通拾取物</td>
+          <td data-en="A 3×3 of coloured blocks with a contribution icon in the middle">3×3 彩色方块 + 贡献图标</td>
+          <td>+50</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Bug">虫子</td>
+          <td data-en="Stomp it from above to bounce off; touch it side-on and you lose a life (1.5s invulnerable)">从上方踩扁可弹跳，侧面撞上掉一条命（无敌 1.5s）</td>
+          <td>+25</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Ducky">鸭子</td>
+          <td data-en="Catch it and it follows for 12.5s, pulling pickups within 20 cells toward you">追上后跟随 12.5 秒，期间把 20 格内的拾取物吸过来</td>
+          <td>—</td>
+        </tr>
+      </table>
+      <p class="hint" data-en="Three lives. The world accelerates from 2 to 20 cells a second, and power-ups shorten by up to 25% as it does.">
+        3 条命。世界会随时间从 2 格/秒加速到 20 格/秒，道具持续时间也随之缩短最多 25%。
+      </p>
+    </div>
+
+    <div class="notes">
+      <h2 data-en="What matches the original">与原站一致的部分</h2>
+      <table>
+        <tr>
+          <th data-en="Item">项</th>
+          <th data-en="Notes">说明</th>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Assets">资源</td>
+          <td data-en="The sprite sheet, the GLB model and the contribution icons are the original files">原始精灵图、GLB 模型、贡献图标全部为原站文件</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Sound">音效</td>
+          <td data-en="Synthesised live with WebAudio (oscillators + noise + convolution reverb) — no audio files, ten effects traced parameter by parameter">WebAudio 实时合成（振荡器 + 噪声 + 卷积混响），非音频文件，10 种音效参数逐条还原</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Rendering">渲染</td>
+          <td data-en="Orthographic camera + InstancedMesh + seven custom shaders (grid fade, Mona sprite, trails, bug atlas, face, pupil, transition)">正交相机 + InstancedMesh + 7 套自定义 shader（网格渐隐 / Mona 精灵 / 残影 / 虫子图集 / 脸部 / 瞳孔 / 转场）</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Levels">关卡</td>
+          <td data-en="Seeded with a Lehmer PRNG — flat / raised / stairs / bridge patterns plus a bag shuffle">Lehmer PRNG 种子生成，flat / raised / stairs / bridge 四种 pattern + bag shuffle</td>
+        </tr>
+        <tr>
+          <td class="mono" data-en="Animation">动画</td>
+          <td data-en="All of it runs on GSAP timelines">全部用 GSAP 驱动，与 Babylon 无关</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var KEY = 'universe-lab:lang';
+      var lang;
+      try { lang = localStorage.getItem(KEY); } catch (e) {}
+      if (lang !== 'en' && lang !== 'zh') lang = 'en';
+      var els = [];
+      function apply() {
+        for (var i = 0; i < els.length; i++) {
+          var el = els[i];
+          el.textContent = lang === 'en' ? el.getAttribute('data-en') : el.__zh;
+        }
+        document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+        var b = document.getElementById('unvLang');
+        if (b) b.textContent = lang === 'en' ? '中文' : 'EN';
+      }
+      function boot() {
+        var list = document.querySelectorAll('[data-en]');
+        for (var i = 0; i < list.length; i++) {
+          list[i].__zh = list[i].textContent;
+          els.push(list[i]);
+        }
+        var b = document.getElementById('unvLang');
+        if (b) {
+          b.addEventListener('click', function () {
+            lang = lang === 'en' ? 'zh' : 'en';
+            try { localStorage.setItem(KEY, lang); } catch (e) {}
+            apply();
+          });
+        }
+        var here = location.pathname.split('/').pop() || 'index.html';
+        var links = document.querySelectorAll('.unv-nav a');
+        for (var j = 0; j < links.length; j++) {
+          var h = links[j].getAttribute('href').split('/').pop() || 'index.html';
+          if (h === here) links[j].classList.add('is-here');
+        }
+        apply();
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
+  </script>
+
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
