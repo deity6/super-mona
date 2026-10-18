@@ -416,6 +416,15 @@ export function SuperMona({ eyebrow = TEXT.eyebrow.left, portraitHint, topBar = 
 
   const blocked = !supported || reducedMotion;
   const portrait = usePortrait();
+  /**
+   * 竖屏提示是不是真的在挡着。
+   *
+   * 为真时**整个动作区都不渲染**。以前只是把 PLAY 设成 `disabled` —— 于是它
+   * 仍然画在画面上，被 `.rotateHint` 的半透明层压着露出半截，看起来像一颗坏掉
+   * 的按钮（用户截图里那个 ghost PLAY）。竖屏既然进不了局，就不该出现任何
+   * 「可以开始」的暗示：按钮、EXIT、SUBMIT、眉标一起收掉，只留提示。
+   */
+  const showingRotate = !blocked && portrait && Boolean(portraitHint);
   const roomy = useRoomy();
   /**
    * 顶部条到底开不开。
@@ -652,7 +661,7 @@ export function SuperMona({ eyebrow = TEXT.eyebrow.left, portraitHint, topBar = 
           ⚠️ 它必须是 wrapper 的**直接子元素**。`.actions` 那一层在窄屏下是绝对定位的
           覆盖层（贴在画布底部、只有 20px 高），挂在它里面再写 `top: 52px` 会直接
           落到画布外面去（踩过：按钮 DOM 在、坐标也对，页面上什么都没有）。 */}
-      {board && !showTopBar && (
+      {board && !showTopBar && !showingRotate && (
         <button
           type="button"
           className={styles.rankFloating}
@@ -667,7 +676,7 @@ export function SuperMona({ eyebrow = TEXT.eyebrow.left, portraitHint, topBar = 
       {/* 触屏操作：只在游戏进行中出现。**窄屏下叠在画布底部**（半透明白底），
           不再占据画布以外的高度 —— 画布宽度是按剩余高度反推的，它每占 1px，
           画布就窄 2.6px。方向键在左、跳跃在右，按手游的习惯摆。 */}
-      {!blocked && touchInput && inGame && !state.gameOver && (
+      {!blocked && !showingRotate && touchInput && inGame && !state.gameOver && (
         <div className={styles.touchPad} data-compact={topBar ? '' : undefined}>
           <div className={styles.touchGroup}>
             <button
@@ -698,7 +707,7 @@ export function SuperMona({ eyebrow = TEXT.eyebrow.left, portraitHint, topBar = 
         </div>
       )}
 
-      {!blocked && (
+      {!blocked && !showingRotate && (
         <div className={styles.actions} data-compact={topBar ? '' : undefined}>
           <Eyebrow
             className={styles.heroEyebrow}
